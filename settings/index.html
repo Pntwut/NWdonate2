@@ -92,10 +92,13 @@
 
 <script>
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "YOUR_PROJECT",
+  apiKey: "AIzaSyC_FnxOT-9-hRVX9bnyzL8-ztzrow-NxJQ",
+  authDomain: "nwdonate2.firebaseapp.com",
+  databaseURL: "https://nwdonate2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nwdonate2",
+  storageBucket: "nwdonate2.firebasestorage.app",
+  messagingSenderId: "767503307361",
+  appId: "1:767503307361:web:87374ecd1aacdbb18f9020"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
@@ -108,20 +111,26 @@ document.getElementById('unlockBtn').onclick = async () => {
     gateStatus.textContent = 'PIN ต้องมีอย่างน้อย 4 หลัก';
     return;
   }
-  const snap = await db.ref('config/settingsPin').get();
-  const savedPin = snap.exists() ? snap.val() : null;
+  try {
+    const snap = await db.ref('config/settingsPin').get();
+    const savedPin = snap.exists() ? snap.val() : null;
 
-  if (!savedPin) {
-    // ยังไม่เคยตั้ง PIN มาก่อน -> ตั้งตัวนี้เป็น PIN ใหม่
-    await db.ref('config/settingsPin').set(entered);
-    openSettings();
-    return;
-  }
-  if (entered === savedPin) {
-    openSettings();
-  } else {
+    if (!savedPin) {
+      // ยังไม่เคยตั้ง PIN มาก่อน -> ตั้งตัวนี้เป็น PIN ใหม่
+      await db.ref('config/settingsPin').set(entered);
+      openSettings();
+      return;
+    }
+    if (entered === savedPin) {
+      openSettings();
+    } else {
+      gateStatus.className = 'status err';
+      gateStatus.textContent = '❌ PIN ไม่ถูกต้อง';
+    }
+  } catch (err) {
     gateStatus.className = 'status err';
-    gateStatus.textContent = '❌ PIN ไม่ถูกต้อง';
+    gateStatus.textContent = '❌ เชื่อม Firebase ไม่ได้: ' + err.message + ' (เช็คว่าใส่ firebaseConfig ถูกต้องหรือยัง)';
+    console.error(err);
   }
 };
 

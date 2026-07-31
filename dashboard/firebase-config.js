@@ -3,10 +3,13 @@
    (ต้องใช้ config ชุดเดียวกับ overlay.html และ index.html หน้าโดเนท)
    ============================================================ */
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT.firebaseapp.com",
-  databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "YOUR_PROJECT",
+  apiKey: "AIzaSyC_FnxOT-9-hRVX9bnyzL8-ztzrow-NxJQ",
+  authDomain: "nwdonate2.firebaseapp.com",
+  databaseURL: "https://nwdonate2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nwdonate2",
+  storageBucket: "nwdonate2.firebasestorage.app",
+  messagingSenderId: "767503307361",
+  appId: "1:767503307361:web:87374ecd1aacdbb18f9020"
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();

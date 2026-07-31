@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Donation Overlay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --ink:#f6efe4;
+    --card:#160f22;
+    --card-edge:#2c1f42;
+    --gold:#f3b93a;
+    --gold-deep:#c98a12;
+    --pink:#ff3d77;
+    --cyan:#2fe6d6;
+    --shadow: 0 20px 60px rgba(0,0,0,.55);
+  }
+  html,body{
+    margin:0; padding:0; background:transparent;
+    width:100vw; height:100vh; overflow:hidden;
+    font-family:'Sarabun',sans-serif; color:var(--ink);
+  }
+  #stage{
+    position:fixed; inset:0;
+    display:flex; align-items:flex-start; justify-content:center;
+    padding-top:6vh;
+    pointer-events:none;
+  }
+
+  .alert{
+    position:relative;
+    display:flex; align-items:center; gap:18px;
+    background:
+      radial-gradient(120% 160% at 0% 0%, rgba(255,61,119,.18), transparent 55%),
+      radial-gradient(120% 160% at 100% 100%, rgba(47,230,214,.14), transparent 55%),
+      var(--card);
+    border:1px solid var(--card-edge);
+    border-radius:22px;
+    padding:16px 30px 16px 16px;
+    box-shadow:var(--shadow);
+    min-width:420px;
+    max-width:640px;
+    transform:translateY(-140%) scale(.9);
+    opacity:0;
+    transition:transform .55s cubic-bezier(.2,1.4,.4,1), opacity .35s ease;
+  }
+  .alert.show{ transform:translateY(0) scale(1); opacity:1; }
+  .alert.leave{ transform:translateY(-30px) scale(.96); opacity:0; transition:all .35s ease; }
+
+  .alert::before{ /* top hairline accent */
+    content:"";
+    position:absolute; top:0; left:22px; right:22px; height:2px;
+    background:linear-gradient(90deg, var(--pink), var(--gold), var(--cyan));
+    border-radius:2px;
+  }
+
+  .badge{
+    position:relative;
+    width:76px; height:76px; flex:0 0 auto;
+    border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #ffe9b0, var(--gold) 55%, var(--gold-deep) 100%);
+    display:flex; align-items:center; justify-content:center;
+    font-size:34px;
+    box-shadow:0 0 0 4px rgba(243,185,58,.18), 0 8px 22px rgba(201,138,18,.45);
+  }
+  .badge .coin{
+    position:absolute; inset:0; border-radius:50%;
+    animation:spin 2.6s linear infinite;
+  }
+  @keyframes spin{ from{transform:rotateY(0)} to{transform:rotateY(360deg)} }
+
+  .coin-drop{
+    position:absolute; left:50%; top:-90px; font-size:26px;
+    transform:translateX(-50%);
+    animation:drop .7s cubic-bezier(.3,.6,.3,1) forwards;
+  }
+  @keyframes drop{
+    0%{ top:-90px; opacity:0; transform:translateX(-50%) rotate(0deg); }
+    60%{ opacity:1; }
+    100%{ top:22px; opacity:0; transform:translateX(-50%) rotate(220deg); }
+  }
+
+  .info{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .name{
+    font-family:'Kanit',sans-serif; font-weight:800; font-size:23px;
+    color:#fff; letter-spacing:.2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:340px;
+    text-shadow:0 2px 10px rgba(0,0,0,.4);
+  }
+  .name .sent{
+    font-family:'Sarabun',sans-serif; font-weight:400; font-size:15px;
+    color:#c9bfe0; margin-left:8px;
+  }
+  .gift-line{
+    display:flex; align-items:center; gap:10px;
+    font-family:'Kanit',sans-serif; font-weight:600; font-size:17px;
+    color:var(--gold);
+  }
+  .count{
+    font-family:'JetBrains Mono',monospace; font-weight:700;
+    color:var(--cyan); font-size:15px;
+    background:rgba(47,230,214,.08); border:1px solid rgba(47,230,214,.3);
+    padding:2px 8px; border-radius:8px;
+  }
+
+  .value{
+    position:absolute; top:-14px; right:-10px;
+    font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px;
+    background:linear-gradient(135deg, var(--pink), #ff7aa8);
+    color:#fff; padding:5px 12px; border-radius:999px;
+    box-shadow:0 6px 16px rgba(255,61,119,.4);
+  }
+
+  /* connection status pip, only visible with ?debug=1 */
+  #status{
+    position:fixed; bottom:14px; left:14px;
+    font-family:'JetBrains Mono',monospace; font-size:12px;
+    color:#9d93b8; background:rgba(0,0,0,.4); padding:6px 10px;
+    border-radius:8px; display:none;
+  }
+  #status.on{ display:block; }
+  #status .dot{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:#e5484d; }
+  #status.connected .dot{ background:#3ecf6e; }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="status"><span class="dot"></span><span id="status-text">connecting…</span></div>
+
+<script>
+/* ============================================================
+   ตั้งค่า (CONFIG) — แก้ตรงนี้ให้ตรงกับของ วุฒิ
+   ============================================================ */
+const CONFIG = {
+  // เปิด TikFinity Desktop แล้วดู URL ที่หน้า "Actions & Events" > "Events API"
+  // ปกติจะเป็น ws://127.0.0.1:21213/ เปลี่ยนได้ด้วย ?ws=ws://... ต่อท้าย URL ก็ได้
+  wsUrl: new URLSearchParams(location.search).get('ws') || 'ws://127.0.0.1:21213/',
+
+  // ขั้นต่ำของเพชร (diamonds) ที่จะให้ขึ้นจอ กันของเล็กๆ รก จอ (0 = ขึ้นทุกอัน)
+  minDiamonds: 0,
+
+  // อ่านชื่อ/ข้อความด้วยเสียง (Text-To-Speech ของเบราว์เซอร์)
+  ttsEnabled: true,
+  ttsLang: 'th-TH',
+  ttsRate: 1.05,
+
+  // เวลาที่การ์ดค้างอยู่บนจอ (ms) ก่อนเลื่อนออก
+  displayMs: 6000,
+
+  // ===== Firebase (ใช้โปรเจกต์เดียวกับที่เคยทำระบบคิวได้เลย) =====
+  // ไปที่ Firebase Console > Project settings > SDK setup and configuration > Config
+  firebaseEnabled: true,
+  firebaseConfig: {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "YOUR_PROJECT",
+  },
+};
+
+/* ============================================================
+   ส่วนทำงานจริง — ไม่ต้องแก้ ยกเว้นอยากปรับพฤติกรรม
+   ============================================================ */
+const stage = document.getElementById('stage');
+const statusEl = document.getElementById('status');
+const statusText = document.getElementById('status-text');
+if (new URLSearchParams(location.search).get('debug') === '1') statusEl.classList.add('on');
+
+let db = null;
+const overlayLoadedAt = Date.now();
+if (CONFIG.firebaseEnabled && typeof firebase !== 'undefined') {
+  try {
+    firebase.initializeApp(CONFIG.firebaseConfig);
+    db = firebase.database();
+    // ฟังรายการโดเนทที่มาจากหน้า donate.html (จ่ายผ่าน PromptPay + ตรวจสลิปแล้ว)
+    // เฉพาะรายการใหม่หลังเปิดหน้านี้เท่านั้น กันของเก่าเด้งซ้ำตอนโหลดหน้า
+    db.ref('donations').orderByChild('ts').startAt(overlayLoadedAt)
+      .on('child_added', snap => {
+        const entry = snap.val();
+        if (entry && entry.source === 'promptpay') {
+          queue.push({
+            uniqueId: entry.uniqueId,
+            nickname: entry.nickname,
+            giftName: entry.giftName,
+            repeatCount: entry.repeatCount || 1,
+            diamondValue: entry.diamondValue,
+          });
+          processQueue();
+        }
+      });
+  } catch (e) { console.warn('Firebase init failed:', e); }
+}
+
+function logDonation(entry) {
+  if (!db) return;
+  const ref = db.ref('donations').push();
+  ref.set({ ...entry, ts: Date.now() });
+  // อัปเดตยอดรวมแบบ atomic กันชนกันตอนของขวัญเข้ามาถี่ๆ
+  db.ref('stats/totalDiamonds').transaction(v => (v || 0) + entry.diamondValue);
+  const safeKey = entry.uniqueId.replace(/[.#$\[\]]/g, '_');
+  db.ref('stats/byDonor/' + safeKey + '/diamonds').transaction(v => (v || 0) + entry.diamondValue);
+  db.ref('stats/byDonor/' + safeKey + '/nickname').set(entry.nickname);
+}
+
+const queue = [];
+let showing = false;
+
+function speak(text) {
+  if (!CONFIG.ttsEnabled || !('speechSynthesis' in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = CONFIG.ttsLang;
+  u.rate = CONFIG.ttsRate;
+  speechSynthesis.speak(u);
+}
+
+function giftEmoji(name = '') {
+  const n = name.toLowerCase();
+  if (n.includes('rose')) return '🌹';
+  if (n.includes('lion') || n.includes('galaxy')) return '🦁';
+  if (n.includes('universe') || n.includes('planet')) return '🌌';
+  if (n.includes('finger') || n.includes('heart')) return '❤️';
+  return '🎁';
+}
+
+function renderAlert(entry) {
+  showing = true;
+  const el = document.createElement('div');
+  el.className = 'alert';
+  el.innerHTML = `
+    <div class="badge">
+      <div class="coin">${giftEmoji(entry.giftName)}</div>
+    </div>
+    <div class="coin-drop">✨</div>
+    <div class="info">
+      <div class="name">${entry.nickname}<span class="sent">ส่งของขวัญให้กำลังใจ</span></div>
+      <div class="gift-line">${entry.giftName} <span class="count">x${entry.repeatCount}</span></div>
+    </div>
+    <div class="value">${entry.diamondValue.toLocaleString()} 💎</div>
+  `;
+  stage.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+
+  speak(`ขอบคุณ ${entry.nickname} สำหรับ ${entry.giftName} จำนวน ${entry.repeatCount} ชิ้นครับ`);
+
+  setTimeout(() => {
+    el.classList.add('leave');
+    setTimeout(() => {
+      el.remove();
+      showing = false;
+      processQueue();
+    }, 350);
+  }, CONFIG.displayMs);
+}
+
+function processQueue() {
+  if (showing || queue.length === 0) return;
+  renderAlert(queue.shift());
+}
+
+function handleGift(data) {
+  const diamondValue = (data.diamondCount || 1) * (data.repeatCount || 1);
+  if (diamondValue < CONFIG.minDiamonds) return;
+
+  const entry = {
+    uniqueId: data.uniqueId || 'unknown',
+    nickname: data.nickname || data.uniqueId || 'ผู้ชม',
+    giftName: data.giftName || 'ของขวัญ',
+    repeatCount: data.repeatCount || 1,
+    diamondValue,
+  };
+
+  // สำหรับของขวัญแบบสตรีค (ส่งค้างไว้) รอ repeatEnd ก่อนค่อยขึ้นจอ/บันทึก กันขึ้นซ้ำ
+  if (data.repeatEnd === false) return;
+
+  queue.push(entry);
+  logDonation(entry);
+  processQueue();
+}
+
+function connect() {
+  const ws = new WebSocket(CONFIG.wsUrl);
+  ws.onopen = () => { statusEl.classList.add('connected'); statusText.textContent = 'เชื่อมต่อ TikFinity แล้ว'; };
+  ws.onclose = () => {
+    statusEl.classList.remove('connected');
+    statusText.textContent = 'หลุดการเชื่อมต่อ กำลังลองใหม่…';
+    setTimeout(connect, 3000);
+  };
+  ws.onerror = () => ws.close();
+  ws.onmessage = (msg) => {
+    let payload;
+    try { payload = JSON.parse(msg.data); } catch { return; }
+    if (payload.event === 'gift') handleGift(payload.data || {});
+  };
+}
+connect();
+
+// ทดสอบจากคอนโซลเบราว์เซอร์ได้ด้วย: testGift()
+window.testGift = function () {
+  handleGift({
+    uniqueId: 'test_user',
+    nickname: 'ผู้ชมทดสอบ',
+    giftName: 'Rose',
+    repeatCount: Math.ceil(Math.random() * 20),
+    diamondCount: 1,
+    repeatEnd: true,
+  });
+};
+if (new URLSearchParams(location.search).get('demo') === '1') {
+  setInterval(() => window.testGift(), 4000);
+}
+</script>
+</body>
+</html>

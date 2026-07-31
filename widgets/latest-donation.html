@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Latest Donation Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@600;800&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  html,body{ margin:0; background:transparent; width:100vw; height:100vh; overflow:hidden; }
+  #card{
+    position:fixed; bottom:16px; left:16px; max-width:360px;
+    background:linear-gradient(135deg, rgba(22,15,34,.92), rgba(22,15,34,.85));
+    border:1px solid #2c1f42; border-radius:16px; padding:14px 20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    opacity:0; transform:translateY(10px); transition:.4s ease;
+  }
+  #card.show{ opacity:1; transform:translateY(0); }
+  .label{ font-family:'Kanit',sans-serif; font-weight:700; font-size:11px; color:#9d93b8; margin-bottom:4px; }
+  .name{ font-family:'Kanit',sans-serif; font-weight:800; font-size:16px; color:#fff; }
+  .msg{ font-family:'Sarabun',sans-serif; font-size:13px; color:#e6ddf5; margin:4px 0; }
+  .amt{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; color:#f3b93a; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="label">🕘 โดเนทล่าสุด</div>
+  <div class="name" id="name">–</div>
+  <div class="msg" id="msg"></div>
+  <div class="amt" id="amt">–</div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "YOUR_PROJECT",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+db.ref('donations').limitToLast(1).on('value', snap => {
+  const data = snap.val() || {};
+  const rows = Object.values(data);
+  const card = document.getElementById('card');
+  if (!rows.length) { card.classList.remove('show'); return; }
+  const latest = rows[0];
+  document.getElementById('name').textContent = latest.nickname;
+  document.getElementById('msg').textContent = latest.giftName || '';
+  document.getElementById('amt').textContent = (latest.diamondValue || 0).toLocaleString() + ' ฿';
+  card.classList.add('show');
+});
+</script>
+</body>
+</html>

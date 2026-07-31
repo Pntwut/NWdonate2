@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Donation Timer Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  html,body{ margin:0; background:transparent; width:100vw; height:100vh; overflow:hidden; }
+  #card{
+    position:fixed; top:16px; left:16px;
+    background:linear-gradient(135deg, rgba(22,15,34,.92), rgba(22,15,34,.85));
+    border:1px solid #2c1f42; border-radius:16px; padding:10px 20px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    text-align:center;
+  }
+  .label{ font-family:'Kanit',sans-serif; font-weight:700; font-size:11px; color:#9d93b8; margin-bottom:2px; }
+  .time{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:22px; color:#2fe6d6; letter-spacing:.05em; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div class="label">⏱️ ไม่มีคนโดเนทมา</div>
+  <div class="time" id="time">--:--:--</div>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "YOUR_PROJECT",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let lastDonationTs = null;
+
+db.ref('donations').orderByChild('ts').limitToLast(1).on('value', snap => {
+  const data = snap.val() || {};
+  const rows = Object.values(data);
+  lastDonationTs = rows.length ? rows[0].ts : Date.now();
+});
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+setInterval(() => {
+  if (!lastDonationTs) return;
+  const diff = Math.max(0, Date.now() - lastDonationTs);
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  document.getElementById('time').textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+}, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<title>Top Donor Widget</title>
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@700;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  html,body{ margin:0; background:transparent; width:100vw; height:100vh; overflow:hidden; }
+  #card{
+    position:fixed; top:16px; right:16px;
+    display:flex; align-items:center; gap:12px;
+    background:linear-gradient(135deg, rgba(22,15,34,.92), rgba(22,15,34,.85));
+    border:1px solid #2c1f42; border-radius:16px; padding:12px 20px 12px 14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.4);
+    opacity:0; transform:translateY(-10px); transition:.4s ease;
+  }
+  #card.show{ opacity:1; transform:translateY(0); }
+  #crown{ font-size:30px; }
+  .label{ font-family:'Kanit',sans-serif; font-weight:700; font-size:11px; color:#9d93b8; }
+  .name{ font-family:'Kanit',sans-serif; font-weight:800; font-size:17px; color:#fff; }
+  .amt{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:13px; color:#f3b93a; }
+</style>
+</head>
+<body>
+<div id="card">
+  <div id="crown">👑</div>
+  <div>
+    <div class="label">TOP DONOR</div>
+    <div class="name" id="name">–</div>
+    <div class="amt" id="amt">–</div>
+  </div>
+</div>
+
+<script>
+/* ตั้งค่า Firebase — ชุดเดียวกับไฟล์อื่นในระบบ */
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "YOUR_PROJECT",
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+db.ref('donations').on('value', snap => {
+  const data = snap.val() || {};
+  const byDonor = {};
+  Object.values(data).forEach(d => {
+    const key = d.nickname || 'ไม่ระบุชื่อ';
+    byDonor[key] = (byDonor[key] || 0) + (d.diamondValue || 0);
+  });
+  const top = Object.entries(byDonor).sort((a, b) => b[1] - a[1])[0];
+  const card = document.getElementById('card');
+  if (!top) { card.classList.remove('show'); return; }
+  document.getElementById('name').textContent = top[0];
+  document.getElementById('amt').textContent = top[1].toLocaleString() + ' ฿';
+  card.classList.add('show');
+});
+</script>
+</body>
+</html>

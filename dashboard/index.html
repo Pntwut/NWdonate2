@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard โดเนท</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+</head>
+<body>
+
+<button id="menuToggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+
+<div id="sidebar">
+  <h1>💌 Donate Panel</h1>
+  <div class="navgroup">ภาพรวม</div>
+  <a href="#overview">📊 แดชบอร์ด</a>
+  <a href="#goal">🎯 เป้าหมายโดเนท</a>
+  <a href="#chart">📈 กราฟย้อนหลัง</a>
+  <div class="navgroup">ประวัติ</div>
+  <a href="#leaderboard">🏆 ผู้โดเนทสูงสุด</a>
+  <a href="#history">🕘 โดเนทล่าสุด</a>
+  <div class="navgroup">บัญชี</div>
+  <a href="#tax">🧾 สรุปยอด/ภาษี</a>
+</div>
+
+<div id="main">
+
+  <div class="topbar">
+    <div>
+      <h1 class="page-title">📊 สรุปยอดโดเนท</h1>
+      <div class="sub">ข้อมูลจาก Firebase — อัปเดตแบบเรียลไทม์</div>
+    </div>
+  </div>
+
+  <h2 class="section" id="overview">ภาพรวม</h2>
+  <div class="grid">
+    <div class="stat"><div class="label">ยอดรวมทั้งหมด</div><div class="num" id="totalAll">–</div></div>
+    <div class="stat"><div class="label">ยอดวันนี้</div><div class="num" id="totalToday">–</div></div>
+    <div class="stat"><div class="label">ยอดเดือนนี้</div><div class="num" id="totalMonth">–</div></div>
+    <div class="stat"><div class="label">รายการวันนี้</div><div class="num" id="countToday">–</div></div>
+  </div>
+
+  <h2 class="section" id="goal">🎯 เป้าหมายโดเนท</h2>
+  <div class="panel">
+    <div class="goal-row">
+      <input type="number" id="goalInput" placeholder="ตั้งเป้า (บาท)">
+      <button id="saveGoalBtn">บันทึกเป้าหมาย</button>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="goalFill">0%</div></div>
+    <div class="goal-caption" id="goalCaption">ยังไม่ได้ตั้งเป้าหมาย</div>
+  </div>
+
+  <h2 class="section" id="chart">📈 กราฟยอดโดเนทย้อนหลัง</h2>
+  <div class="panel">
+    <h3>
+      แนวโน้มยอดโดเนท
+      <div class="chart-tabs">
+        <button data-days="7" class="active">7 วัน</button>
+        <button data-days="14">14 วัน</button>
+        <button data-days="30">30 วัน</button>
+      </div>
+    </h3>
+    <div id="chartWrap"><svg id="chartSvg" width="100%" height="220"></svg></div>
+  </div>
+
+  <h2 class="section" id="leaderboard">🏆 อันดับผู้สนับสนุน</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>#</th><th>ชื่อ</th><th style="text-align:right">ยอดรวม (บาท)</th></tr></thead>
+      <tbody id="leaderboardBody"><tr><td class="empty" colspan="3">กำลังโหลด…</td></tr></tbody>
+    </table>
+  </div>
+
+  <h2 class="section" id="history">🕘 ประวัติล่าสุด</h2>
+  <div class="panel">
+    <table>
+      <thead><tr><th>เวลา</th><th>ชื่อ</th><th>ข้อความ/ของขวัญ</th><th style="text-align:right">บาท</th></tr></thead>
+      <tbody id="historyBody"><tr><td class="empty" colspan="4">กำลังโหลด…</td></tr></tbody>
+    </table>
+  </div>
+
+  <h2 class="section" id="tax">🧾 สรุปยอดรายเดือน (สำหรับดูภาพรวม/ยื่นภาษี)</h2>
+  <div class="panel">
+    <p class="sub tax-note">
+      ตัวเลขนี้เป็นแค่สรุปยอดเข้าบัญชีจากระบบโดเนทเท่านั้น ไม่ใช่แบบฟอร์มภาษีจริง —
+      แนะนำให้ปรึกษาผู้เชี่ยวชาญด้านภาษีก่อนใช้ยื่นจริงครับ
+    </p>
+    <table>
+      <thead><tr><th>เดือน/ปี</th><th>จำนวนรายการ</th><th style="text-align:right">ยอดรวม (บาท)</th></tr></thead>
+      <tbody id="taxBody"><tr><td class="empty" colspan="3">กำลังโหลด…</td></tr></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- ลำดับสำคัญ: firebase-config ต้องมาก่อน แล้วตามด้วยไฟล์ฟีเจอร์ต่างๆ แล้วปิดท้ายด้วย app.js -->
+<script src="firebase-config.js"></script>
+<script src="overview.js"></script>
+<script src="goal.js"></script>
+<script src="chart.js"></script>
+<script src="leaderboard.js"></script>
+<script src="history.js"></script>
+<script src="tax.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

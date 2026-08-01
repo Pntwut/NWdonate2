@@ -78,6 +78,11 @@
   .row input[type=range]{ flex:1; min-width:150px; }
   .row .val{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold); width:52px; text-align:right; }
   .swatch-group{ display:flex; align-items:center; gap:8px; }
+  .hexval{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--muted); }
+  select{
+    flex:1; min-width:200px; background:#0f0a1a; border:1px solid var(--card-edge); border-radius:10px;
+    color:var(--ink); padding:10px 12px; font-size:13.5px; outline:none;
+  }
   .hint{ color:var(--muted); font-size:11px; margin-top:-8px; margin-bottom:14px; }
 
   .toggle{ display:flex; align-items:center; gap:10px; }
@@ -122,19 +127,40 @@
       <h3>🎨 สี</h3>
       <div class="row">
         <label>สีทอง (ราคา/ของขวัญ)</label>
-        <div class="swatch-group"><input type="color" id="colorGold" value="#f3b93a"></div>
+        <div class="swatch-group"><input type="color" id="colorGold" value="#f3b93a"><span class="hexval" id="colorGoldHex">#f3b93a</span></div>
       </div>
       <div class="row">
         <label>สีชมพู (เส้นขอบ/ป้ายราคา)</label>
-        <div class="swatch-group"><input type="color" id="colorPink" value="#ff3d77"></div>
+        <div class="swatch-group"><input type="color" id="colorPink" value="#ff3d77"><span class="hexval" id="colorPinkHex">#ff3d77</span></div>
       </div>
       <div class="row">
         <label>สีฟ้า (จำนวนชิ้น)</label>
-        <div class="swatch-group"><input type="color" id="colorCyan" value="#2fe6d6"></div>
+        <div class="swatch-group"><input type="color" id="colorCyan" value="#2fe6d6"><span class="hexval" id="colorCyanHex">#2fe6d6</span></div>
       </div>
       <div class="row">
         <label>สีพื้นการ์ด</label>
-        <div class="swatch-group"><input type="color" id="colorCard" value="#160f22"></div>
+        <div class="swatch-group"><input type="color" id="colorCard" value="#160f22"><span class="hexval" id="colorCardHex">#160f22</span></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>🔤 ตัวอักษร</h3>
+      <div class="row">
+        <label>ฟอนต์ชื่อผู้โดเนท</label>
+        <select id="fontFamily">
+          <option value="Kanit">Kanit (มาตรฐาน)</option>
+          <option value="Prompt">Prompt</option>
+          <option value="Mitr">Mitr (มน กลม)</option>
+          <option value="Bai Jamjuree">Bai Jamjuree</option>
+          <option value="Chakra Petch">Chakra Petch (เท่ ล้ำ)</option>
+          <option value="Itim">Itim (การ์ตูน น่ารัก)</option>
+          <option value="Charmonman">Charmonman (ลายมือ)</option>
+        </select>
+      </div>
+      <div class="row">
+        <label>ขนาดตัวอักษรชื่อ</label>
+        <input type="range" id="nameSize" min="16" max="36" step="1" value="23">
+        <div class="val" id="nameSizeVal">23px</div>
       </div>
     </div>
 
@@ -157,6 +183,11 @@
         <label>เสียงอ่านชื่อ</label>
         <div class="toggle"><input type="checkbox" id="ttsEnabled" checked> <span style="font-size:13px;color:var(--muted);">เปิดใช้งาน</span></div>
       </div>
+      <div class="row">
+        <label>เลือกเสียงพูด</label>
+        <select id="voiceSelect"><option value="">(ค่าเริ่มต้นของเครื่อง)</option></select>
+      </div>
+      <div class="hint">รายชื่อเสียงขึ้นอยู่กับเครื่อง/เบราว์เซอร์ที่ใช้เปิด overlay ตอนไลฟ์จริง แนะนำเปิดหน้านี้จากเครื่องเดียวกับที่ใช้ไลฟ์ก่อนเลือก</div>
       <div class="row">
         <label>ความเร็วเสียงพูด</label>
         <input type="range" id="ttsRate" min="0.7" max="1.5" step="0.05" value="1.05">
@@ -231,10 +262,16 @@ async function loadCurrentTheme() {
   if (t.pink) document.getElementById('colorPink').value = t.pink;
   if (t.cyan) document.getElementById('colorCyan').value = t.cyan;
   if (t.card) document.getElementById('colorCard').value = t.card;
+  ['Gold', 'Pink', 'Cyan', 'Card'].forEach(name => {
+    document.getElementById('color' + name + 'Hex').textContent = document.getElementById('color' + name).value;
+  });
+  if (t.fontFamily) document.getElementById('fontFamily').value = t.fontFamily;
+  if (t.nameSize) { document.getElementById('nameSize').value = t.nameSize; document.getElementById('nameSizeVal').textContent = t.nameSize + 'px'; }
   if (t.sentLabel) document.getElementById('sentLabel').value = t.sentLabel;
   if (t.ttsTemplate) document.getElementById('ttsTemplate').value = t.ttsTemplate;
   if (typeof t.ttsEnabled === 'boolean') document.getElementById('ttsEnabled').checked = t.ttsEnabled;
   if (t.ttsRate) { document.getElementById('ttsRate').value = t.ttsRate; document.getElementById('ttsRateVal').textContent = t.ttsRate + 'x'; }
+  if (t.voiceName) document.getElementById('voiceSelect').value = t.voiceName;
   if (t.displayMs) { const sec = t.displayMs / 1000; document.getElementById('displaySec').value = sec; document.getElementById('displaySecVal').textContent = sec + 's'; }
 }
 
@@ -248,7 +285,39 @@ document.getElementById('testBtn').onclick = () => {
   }
 };
 
+/* ===== แสดงรหัสสี hex สดๆ ข้าง color picker ===== */
+['Gold', 'Pink', 'Cyan', 'Card'].forEach(name => {
+  const input = document.getElementById('color' + name);
+  const label = document.getElementById('color' + name + 'Hex');
+  input.addEventListener('input', () => { label.textContent = input.value; });
+});
+
+/* ===== โหลดรายชื่อเสียงพูดที่เครื่องนี้มี (บาง browser โหลดแบบ async) ===== */
+function populateVoices() {
+  const select = document.getElementById('voiceSelect');
+  const current = select.value;
+  const voices = speechSynthesis.getVoices();
+  select.innerHTML = '<option value="">(ค่าเริ่มต้นของเครื่อง)</option>';
+  // เอาเสียงไทยขึ้นก่อน แล้วตามด้วยเสียงอื่นๆ
+  const thVoices = voices.filter(v => v.lang.startsWith('th'));
+  const otherVoices = voices.filter(v => !v.lang.startsWith('th'));
+  [...thVoices, ...otherVoices].forEach(v => {
+    const opt = document.createElement('option');
+    opt.value = v.name;
+    opt.textContent = `${v.name} (${v.lang})`;
+    select.appendChild(opt);
+  });
+  if (current) select.value = current;
+}
+populateVoices();
+if ('onvoiceschanged' in speechSynthesis) {
+  speechSynthesis.onvoiceschanged = populateVoices;
+}
+
 /* ===== อัปเดตตัวเลขข้าง slider แบบสด ===== */
+document.getElementById('nameSize').oninput = (e) => {
+  document.getElementById('nameSizeVal').textContent = e.target.value + 'px';
+};
 document.getElementById('ttsRate').oninput = (e) => {
   document.getElementById('ttsRateVal').textContent = parseFloat(e.target.value).toFixed(2) + 'x';
 };
@@ -264,10 +333,13 @@ document.getElementById('saveBtn').onclick = async () => {
     pink: document.getElementById('colorPink').value,
     cyan: document.getElementById('colorCyan').value,
     card: document.getElementById('colorCard').value,
+    fontFamily: document.getElementById('fontFamily').value,
+    nameSize: parseInt(document.getElementById('nameSize').value),
     sentLabel: document.getElementById('sentLabel').value.trim(),
     ttsTemplate: document.getElementById('ttsTemplate').value.trim(),
     ttsEnabled: document.getElementById('ttsEnabled').checked,
     ttsRate: parseFloat(document.getElementById('ttsRate').value),
+    voiceName: document.getElementById('voiceSelect').value,
     displayMs: parseInt(document.getElementById('displaySec').value) * 1000,
   };
   try {

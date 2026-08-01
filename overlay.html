@@ -151,6 +151,11 @@ const CONFIG = {
   // เวลาที่การ์ดค้างอยู่บนจอ (ms) ก่อนเลื่อนออก
   displayMs: 6000,
 
+  // ข้อความที่ปรับแต่งได้ (แก้ได้ทั้งจากตรงนี้ หรือจากหน้า customize/ ที่จะ override ทับอัตโนมัติ)
+  sentLabel: 'ส่งของขวัญให้กำลังใจ',
+  // ใช้ {name} {gift} {count} แทนค่าจริงได้
+  ttsTemplate: 'ขอบคุณ {name} สำหรับ {gift} จำนวน {count} ชิ้นครับ',
+
   // ===== Firebase (ใช้โปรเจกต์เดียวกับที่เคยทำระบบคิวได้เลย) =====
   // ไปที่ Firebase Console > Project settings > SDK setup and configuration > Config
   firebaseEnabled: true,
@@ -195,6 +200,21 @@ if (CONFIG.firebaseEnabled && typeof firebase !== 'undefined') {
           processQueue();
         }
       });
+    // ฟังการตั้งค่าหน้าตา/ข้อความ/เสียง จากหน้า customize/ แบบเรียลไทม์
+    db.ref('config/overlayTheme').on('value', snap => {
+      const t = snap.val();
+      if (!t) return;
+      const root = document.documentElement.style;
+      if (t.gold) root.setProperty('--gold', t.gold);
+      if (t.pink) root.setProperty('--pink', t.pink);
+      if (t.cyan) root.setProperty('--cyan', t.cyan);
+      if (t.card) root.setProperty('--card', t.card);
+      if (t.sentLabel) CONFIG.sentLabel = t.sentLabel;
+      if (t.ttsTemplate) CONFIG.ttsTemplate = t.ttsTemplate;
+      if (typeof t.ttsEnabled === 'boolean') CONFIG.ttsEnabled = t.ttsEnabled;
+      if (t.ttsRate) CONFIG.ttsRate = t.ttsRate;
+      if (t.displayMs) CONFIG.displayMs = t.displayMs;
+    });
   } catch (e) { console.warn('Firebase init failed:', e); }
 }
 
@@ -220,6 +240,13 @@ function speak(text) {
   speechSynthesis.speak(u);
 }
 
+function fillTemplate(str, entry) {
+  return str
+    .replace(/\{name\}/g, entry.nickname)
+    .replace(/\{gift\}/g, entry.giftName)
+    .replace(/\{count\}/g, entry.repeatCount);
+}
+
 function giftEmoji(name = '') {
   const n = name.toLowerCase();
   if (n.includes('rose')) return '🌹';
@@ -239,7 +266,7 @@ function renderAlert(entry) {
     </div>
     <div class="coin-drop">✨</div>
     <div class="info">
-      <div class="name">${entry.nickname}<span class="sent">ส่งของขวัญให้กำลังใจ</span></div>
+      <div class="name">${entry.nickname}<span class="sent">${CONFIG.sentLabel}</span></div>
       <div class="gift-line">${entry.giftName} <span class="count">x${entry.repeatCount}</span></div>
     </div>
     <div class="value">${entry.diamondValue.toLocaleString()} 💎</div>
@@ -247,7 +274,7 @@ function renderAlert(entry) {
   stage.appendChild(el);
   requestAnimationFrame(() => el.classList.add('show'));
 
-  speak(`ขอบคุณ ${entry.nickname} สำหรับ ${entry.giftName} จำนวน ${entry.repeatCount} ชิ้นครับ`);
+  speak(fillTemplate(CONFIG.ttsTemplate, entry));
 
   setTimeout(() => {
     el.classList.add('leave');

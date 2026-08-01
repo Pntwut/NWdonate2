@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donate Panel — หน้าหลัก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg:#0d0917; --card:#160f22; --card-edge:#2c1f42;
+    --ink:#f6efe4; --muted:#9d93b8;
+    --gold:#f3b93a; --pink:#ff3d77; --cyan:#2fe6d6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(60% 50% at 10% 0%, rgba(255,61,119,.10), transparent 60%),
+      radial-gradient(50% 40% at 100% 10%, rgba(47,230,214,.08), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:'Sarabun',sans-serif;
+    padding:40px 5vw 80px;
+  }
+  .header{ margin-bottom:32px; }
+  h1{ font-family:'Kanit',sans-serif; font-weight:800; font-size:28px; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:14px; }
+
+  .quickstats{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:36px; }
+  @media(max-width:700px){ .quickstats{ grid-template-columns:1fr; } }
+  .qstat{
+    background:var(--card); border:1px solid var(--card-edge); border-radius:16px;
+    padding:16px 20px; position:relative; overflow:hidden;
+  }
+  .qstat::before{
+    content:""; position:absolute; top:0; left:18px; right:18px; height:2px;
+    background:linear-gradient(90deg, var(--pink), var(--gold), var(--cyan));
+  }
+  .qstat .label{ color:var(--muted); font-size:12px; margin-bottom:6px; }
+  .qstat .num{ font-family:'JetBrains Mono',monospace; font-weight:700; font-size:22px; color:var(--gold); }
+
+  .grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  @media(max-width:900px){ .grid{ grid-template-columns:repeat(2,1fr); } }
+  @media(max-width:600px){ .grid{ grid-template-columns:1fr; } }
+
+  .card{
+    display:block; text-decoration:none; color:var(--ink);
+    background:var(--card); border:1px solid var(--card-edge); border-radius:18px;
+    padding:22px; position:relative; overflow:hidden; transition:.2s;
+  }
+  .card:hover{ border-color:var(--gold); transform:translateY(-2px); }
+  .card::before{
+    content:""; position:absolute; top:0; left:20px; right:20px; height:2px;
+    background:linear-gradient(90deg, var(--pink), var(--gold), var(--cyan));
+  }
+  .card .icon{ font-size:28px; margin-bottom:10px; display:block; }
+  .card .title{ font-family:'Kanit',sans-serif; font-weight:700; font-size:16px; margin-bottom:4px; }
+  .card .desc{ color:var(--muted); font-size:12.5px; line-height:1.5; }
+  .card .tag{
+    display:inline-block; margin-top:10px; font-size:10.5px; font-family:'JetBrains Mono',monospace;
+    padding:3px 8px; border-radius:6px; background:rgba(243,185,58,.12); color:var(--gold);
+  }
+  .card .tag.warn{ background:rgba(255,61,119,.12); color:var(--pink); }
+
+  .section-label{
+    font-family:'Kanit',sans-serif; font-weight:700; font-size:13px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.06em; margin:32px 0 12px;
+  }
+  .section-label:first-of-type{ margin-top:0; }
+</style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>🎛️ Donate Panel</h1>
+    <div class="sub">หน้าควบคุมส่วนตัว — ห้ามแชร์ลิงก์นี้ให้แฟนคลับ</div>
+  </div>
+
+  <div class="quickstats">
+    <div class="qstat"><div class="label">ยอดรวมทั้งหมด</div><div class="num" id="qTotal">–</div></div>
+    <div class="qstat"><div class="label">ยอดวันนี้</div><div class="num" id="qToday">–</div></div>
+    <div class="qstat"><div class="label">รายการวันนี้</div><div class="num" id="qCount">–</div></div>
+  </div>
+
+  <div class="section-label">แจกให้แฟนคลับ</div>
+  <div class="grid">
+    <a class="card" href="../">
+      <span class="icon">💌</span>
+      <div class="title">หน้าโดเนท</div>
+      <div class="desc">ลิงก์ที่แฟนคลับใช้กรอกชื่อ/ข้อความ/สแกน QR โอนเงิน</div>
+      <span class="tag">แจกได้</span>
+    </a>
+  </div>
+
+  <div class="section-label">ดูสถิติ / จัดการ</div>
+  <div class="grid">
+    <a class="card" href="../dashboard/">
+      <span class="icon">📊</span>
+      <div class="title">Dashboard</div>
+      <div class="desc">ยอดรวม เป้าหมาย กราฟย้อนหลัง อันดับผู้สนับสนุน สรุปภาษี</div>
+    </a>
+    <a class="card" href="../settings/">
+      <span class="icon">⚙️</span>
+      <div class="title">ตั้งค่าระบบ</div>
+      <div class="desc">แก้เบอร์ PromptPay / ชื่อที่แสดงบนหน้าโดเนท</div>
+      <span class="tag warn">ต้องใส่ PIN</span>
+    </a>
+  </div>
+
+  <div class="section-label">Widget สำหรับใส่ใน TikTok LIVE Studio</div>
+  <div class="grid">
+    <a class="card" href="../overlay.html">
+      <span class="icon">🔔</span>
+      <div class="title">แจ้งเตือนโดเนท</div>
+      <div class="desc">Popup เด้งขึ้นจอพร้อมเสียงอ่านเวลามีคนโดเนท</div>
+    </a>
+    <a class="card" href="../widgets/top-donor.html">
+      <span class="icon">👑</span>
+      <div class="title">ผู้โดเนทสูงสุด</div>
+      <div class="desc">การ์ดมุมจอ โชว์คนที่ให้เยอะสุดตลอด</div>
+    </a>
+    <a class="card" href="../widgets/latest-donation.html">
+      <span class="icon">🕘</span>
+      <div class="title">โดเนทล่าสุด</div>
+      <div class="desc">การ์ดมุมจอ ค้างโชว์คนโดเนทล่าสุด</div>
+    </a>
+    <a class="card" href="../widgets/timer.html">
+      <span class="icon">⏱️</span>
+      <div class="title">จับเวลาโดเนท</div>
+      <div class="desc">นับเวลาตั้งแต่มีคนโดเนทล่าสุด</div>
+    </a>
+  </div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC_FnxOT-9-hRVX9bnyzL8-ztzrow-NxJQ",
+  authDomain: "nwdonate2.firebaseapp.com",
+  databaseURL: "https://nwdonate2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nwdonate2",
+  storageBucket: "nwdonate2.firebasestorage.app",
+  messagingSenderId: "767503307361",
+  appId: "1:767503307361:web:87374ecd1aacdbb18f9020"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); }
+function baht(n) { return (n || 0).toLocaleString() + ' ฿'; }
+
+db.ref('donations').on('value', snap => {
+  const data = snap.val() || {};
+  const all = Object.values(data);
+  const todayStart = startOfDay(Date.now());
+  const today = all.filter(d => d.ts >= todayStart);
+
+  document.getElementById('qTotal').textContent = baht(all.reduce((s, d) => s + (d.diamondValue || 0), 0));
+  document.getElementById('qToday').textContent = baht(today.reduce((s, d) => s + (d.diamondValue || 0), 0));
+  document.getElementById('qCount').textContent = today.length + ' ครั้ง';
+});
+</script>
+</body>
+</html>

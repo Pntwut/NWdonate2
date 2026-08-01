@@ -36,6 +36,10 @@
     color:var(--ink); text-decoration:none; font-size:14px; margin-bottom:2px;
   }
   #sidebar a:hover{ background:rgba(243,185,58,.10); color:var(--gold); }
+  #sidebar a.navlink.active{ background:rgba(243,185,58,.14); color:var(--gold); }
+
+  .view{ display:none; }
+  .view.active{ display:block; }
 
   #menuToggle{ display:none; }
   @media(max-width:820px){
@@ -121,11 +125,11 @@
 <div id="sidebar">
   <h1>🎛️ Donate Panel</h1>
   <div class="navgroup">แจกให้แฟนคลับ</div>
-  <a href="#donatelink">💌 ลิงก์หน้าโดเนท</a>
+  <a href="#" class="navlink active" data-view="home">💌 ลิงก์หน้าโดเนท</a>
   <div class="navgroup">จัดการระบบ</div>
-  <a href="#manage">📊 Dashboard / ตั้งค่า</a>
+  <a href="#" class="navlink" data-view="manage">📊 Dashboard / ตั้งค่า</a>
   <div class="navgroup">Widget สำหรับ LIVE Studio</div>
-  <a href="#widgets">🔔 แจ้งเตือน / มุมจอต่างๆ</a>
+  <a href="#" class="navlink" data-view="widgets">🔔 แจ้งเตือน / มุมจอต่างๆ</a>
 </div>
 
 <div id="main">
@@ -135,7 +139,8 @@
     <div class="sub">หน้าควบคุมส่วนตัว — ห้ามแชร์ลิงก์นี้ให้แฟนคลับ</div>
   </div>
 
-  <div class="hero" id="donatelink">
+  <div class="view active" id="view-home">
+  <div class="hero">
     <div class="label">💌 ลิงก์หน้าโดเนท (ก็อปไปแจกแฟนคลับ)</div>
     <div class="link-row">
       <div class="link-box" id="donateLink">https://pntwut.github.io/NWdonate2/</div>
@@ -147,8 +152,10 @@
     <div class="qstat"><div class="label">ยอดวันนี้</div><div class="num" id="qToday">–</div></div>
     <div class="qstat"><div class="label">รายการวันนี้</div><div class="num" id="qCount">–</div></div>
   </div>
+  </div>
 
-  <div class="section-label" id="manage">จัดการระบบ</div>
+  <div class="view" id="view-manage">
+  <div class="section-label">จัดการระบบ</div>
   <div class="item">
     <div class="icon">📊</div>
     <div class="info"><div class="title">Dashboard</div><div class="desc">ยอดรวม กราฟ อันดับผู้สนับสนุน สรุปภาษี</div></div>
@@ -160,7 +167,10 @@
     <div class="actions"><a class="primary" href="../settings/">เปิดดู</a></div>
   </div>
 
-  <div class="section-label" id="widgets">Widget — ก็อปลิงก์ไปวางใน TikTok LIVE Studio</div>
+  </div>
+
+  <div class="view" id="view-widgets">
+  <div class="section-label">Widget — ก็อปลิงก์ไปวางใน TikTok LIVE Studio</div>
   <div class="item">
     <div class="icon">🔔</div>
     <div class="info"><div class="title">แจ้งเตือนโดเนท</div><div class="desc">Popup เด้ง+เสียงอ่านเวลามีคนโดเนท</div></div>
@@ -193,6 +203,7 @@
       <a href="../widgets/timer.html">ดูตัวอย่าง</a>
     </div>
   </div>
+  </div>
 
 </div>
 
@@ -214,9 +225,18 @@ document.querySelectorAll('.widget-copy').forEach(btn => {
   btn.onclick = (e) => copyText(BASE_URL + btn.dataset.url, e.target);
 });
 
-/* ปิดเมนูมือถืออัตโนมัติหลังกดลิงก์ในนั้น */
-document.querySelectorAll('#sidebar a').forEach(a => {
-  a.addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
+/* สลับ view ตามเมนูที่กด + ปิดเมนูมือถืออัตโนมัติ */
+document.querySelectorAll('.navlink').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    const target = link.dataset.view;
+    document.querySelectorAll('.navlink').forEach(l => l.classList.remove('active'));
+    link.classList.add('active');
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + target).classList.add('active');
+    document.getElementById('sidebar').classList.remove('open');
+    window.scrollTo(0, 0);
+  });
 });
 
 /* ===== Firebase: สถิติด่วน ===== */

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ปรับแต่งหน้าจอโดเนท</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@500;700;800&family=Sarabun:wght@400;600&family=JetBrains+Mono:wght@600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg:#0d0917; --card:#160f22; --card-edge:#2c1f42;
+    --ink:#f6efe4; --muted:#9d93b8;
+    --gold:#f3b93a; --pink:#ff3d77; --cyan:#2fe6d6;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(60% 50% at 10% 0%, rgba(255,61,119,.10), transparent 60%),
+      radial-gradient(50% 40% at 100% 10%, rgba(47,230,214,.08), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:'Sarabun',sans-serif;
+    padding:28px 5vw 80px;
+  }
+  .wrap{ max-width:900px; margin:0 auto; }
+  h1{ font-family:'Kanit',sans-serif; font-weight:800; font-size:22px; margin:0 0 4px; }
+  .sub{ color:var(--muted); font-size:13px; margin-bottom:22px; }
+
+  .warn{
+    background:rgba(255,61,119,.08); border:1px solid rgba(255,61,119,.3);
+    border-radius:12px; padding:12px 14px; font-size:12.5px; color:#ffb3c8; margin-bottom:18px; line-height:1.5;
+  }
+
+  /* ===== gate (ใช้ PIN เดียวกับหน้า settings) ===== */
+  #gate{ text-align:center; }
+  #gate input{
+    width:100%; max-width:280px; background:#0f0a1a; border:1px solid var(--card-edge); border-radius:12px;
+    color:var(--ink); font-size:15px; padding:12px 14px; outline:none; margin:12px auto; display:block;
+  }
+  #gate button{
+    background:linear-gradient(135deg, var(--pink), #ff7aa8); border:none; color:#fff;
+    padding:12px 28px; border-radius:14px; font-family:'Kanit',sans-serif; font-weight:700; cursor:pointer;
+  }
+  .status{ margin-top:10px; font-size:13px; }
+  .status.err{ color:#ff6767; }
+
+  /* ===== preview ===== */
+  #previewBox{
+    position:relative; height:260px; border-radius:18px; overflow:hidden; margin-bottom:22px;
+    background:
+      repeating-conic-gradient(#1a1330 0% 25%, #150f24 0% 50%) 50% / 24px 24px;
+    border:1px solid var(--card-edge);
+  }
+  #previewBox iframe{ width:100%; height:100%; border:none; }
+  #testBtn{
+    position:absolute; bottom:14px; right:14px;
+    background:linear-gradient(135deg, var(--cyan), #24b8ab);
+    border:none; color:#08221f; font-weight:700; font-family:'Kanit',sans-serif;
+    padding:10px 18px; border-radius:12px; cursor:pointer; font-size:13px;
+  }
+
+  /* ===== ตัวควบคุม ===== */
+  .panel{
+    background:var(--card); border:1px solid var(--card-edge); border-radius:18px;
+    padding:22px; margin-bottom:18px;
+  }
+  .panel h3{ font-family:'Kanit',sans-serif; font-size:15px; margin:0 0 16px; }
+  .row{ display:flex; align-items:center; gap:14px; margin-bottom:14px; flex-wrap:wrap; }
+  .row label{ font-size:13px; color:var(--muted); flex:0 0 140px; }
+  .row input[type=text]{
+    flex:1; min-width:200px; background:#0f0a1a; border:1px solid var(--card-edge); border-radius:10px;
+    color:var(--ink); padding:10px 12px; font-size:13.5px; outline:none;
+  }
+  .row input[type=color]{
+    width:44px; height:36px; border:1px solid var(--card-edge); border-radius:8px; padding:2px; background:#0f0a1a; cursor:pointer;
+  }
+  .row input[type=range]{ flex:1; min-width:150px; }
+  .row .val{ font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--gold); width:52px; text-align:right; }
+  .swatch-group{ display:flex; align-items:center; gap:8px; }
+  .hint{ color:var(--muted); font-size:11px; margin-top:-8px; margin-bottom:14px; }
+
+  .toggle{ display:flex; align-items:center; gap:10px; }
+  .toggle input{ width:18px; height:18px; }
+
+  #saveBtn{
+    width:100%; padding:14px; border:none; border-radius:14px;
+    background:linear-gradient(135deg, var(--pink), #ff7aa8); color:#fff;
+    font-family:'Kanit',sans-serif; font-weight:700; font-size:16px; cursor:pointer;
+  }
+  #saveStatus{ text-align:center; margin-top:12px; font-size:13px; min-height:18px; }
+  #saveStatus.ok{ color:#3ecf6e; }
+  #saveStatus.err{ color:#ff6767; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>🎨 ปรับแต่งหน้าจอโดเนท</h1>
+  <div class="sub">แก้แล้วกดทดสอบดูผลได้ทันทีในกล่อง preview ด้านล่าง — บันทึกแล้วมีผลกับหน้าจอไลฟ์จริงด้วย</div>
+
+  <div class="warn">
+    ⚠️ หน้านี้เปลี่ยนหน้าตาของ overlay ที่ขึ้นจอไลฟ์จริง — <b>อย่าแชร์ลิงก์นี้ให้คนอื่น</b> ใช้ PIN เดียวกับหน้าตั้งค่า
+  </div>
+
+  <div id="gate">
+    <h1>🔒 ใส่ PIN เพื่อเข้าปรับแต่ง</h1>
+    <input type="password" id="pinInput" placeholder="PIN เดียวกับหน้า settings" inputmode="numeric">
+    <button id="unlockBtn">เข้าสู่หน้าปรับแต่ง</button>
+    <div class="status" id="gateStatus"></div>
+  </div>
+
+  <div id="editorArea" style="display:none;">
+
+    <div id="previewBox">
+      <iframe id="previewFrame" src="../overlay.html?debug=1"></iframe>
+      <button id="testBtn">▶️ ทดสอบแจ้งเตือน</button>
+    </div>
+
+    <div class="panel">
+      <h3>🎨 สี</h3>
+      <div class="row">
+        <label>สีทอง (ราคา/ของขวัญ)</label>
+        <div class="swatch-group"><input type="color" id="colorGold" value="#f3b93a"></div>
+      </div>
+      <div class="row">
+        <label>สีชมพู (เส้นขอบ/ป้ายราคา)</label>
+        <div class="swatch-group"><input type="color" id="colorPink" value="#ff3d77"></div>
+      </div>
+      <div class="row">
+        <label>สีฟ้า (จำนวนชิ้น)</label>
+        <div class="swatch-group"><input type="color" id="colorCyan" value="#2fe6d6"></div>
+      </div>
+      <div class="row">
+        <label>สีพื้นการ์ด</label>
+        <div class="swatch-group"><input type="color" id="colorCard" value="#160f22"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>✏️ ข้อความ</h3>
+      <div class="row">
+        <label>ข้อความใต้ชื่อ</label>
+        <input type="text" id="sentLabel" value="ส่งของขวัญให้กำลังใจ">
+      </div>
+      <div class="row">
+        <label>ประโยคเสียงอ่าน (TTS)</label>
+        <input type="text" id="ttsTemplate" value="ขอบคุณ {name} สำหรับ {gift} จำนวน {count} ชิ้นครับ">
+      </div>
+      <div class="hint">ใช้ {name} {gift} {count} แทนชื่อ/ของขวัญ/จำนวนได้ ระบบจะแทนค่าจริงให้อัตโนมัติ</div>
+    </div>
+
+    <div class="panel">
+      <h3>🔊 เสียงและเวลา</h3>
+      <div class="row">
+        <label>เสียงอ่านชื่อ</label>
+        <div class="toggle"><input type="checkbox" id="ttsEnabled" checked> <span style="font-size:13px;color:var(--muted);">เปิดใช้งาน</span></div>
+      </div>
+      <div class="row">
+        <label>ความเร็วเสียงพูด</label>
+        <input type="range" id="ttsRate" min="0.7" max="1.5" step="0.05" value="1.05">
+        <div class="val" id="ttsRateVal">1.05x</div>
+      </div>
+      <div class="row">
+        <label>เวลาค้างจอ (วินาที)</label>
+        <input type="range" id="displaySec" min="2" max="15" step="1" value="6">
+        <div class="val" id="displaySecVal">6s</div>
+      </div>
+    </div>
+
+    <button id="saveBtn">บันทึกการตั้งค่า</button>
+    <div id="saveStatus"></div>
+  </div>
+
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyC_FnxOT-9-hRVX9bnyzL8-ztzrow-NxJQ",
+  authDomain: "nwdonate2.firebaseapp.com",
+  databaseURL: "https://nwdonate2-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "nwdonate2",
+  storageBucket: "nwdonate2.firebasestorage.app",
+  messagingSenderId: "767503307361",
+  appId: "1:767503307361:web:87374ecd1aacdbb18f9020"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+/* ===== PIN gate (ใช้ config/settingsPin ชุดเดียวกับหน้า settings) ===== */
+const gateStatus = document.getElementById('gateStatus');
+document.getElementById('unlockBtn').onclick = async () => {
+  const entered = document.getElementById('pinInput').value.trim();
+  if (entered.length < 4) {
+    gateStatus.className = 'status err';
+    gateStatus.textContent = 'PIN ต้องมีอย่างน้อย 4 หลัก';
+    return;
+  }
+  try {
+    const snap = await db.ref('config/settingsPin').get();
+    const savedPin = snap.exists() ? snap.val() : null;
+    if (!savedPin) {
+      await db.ref('config/settingsPin').set(entered);
+      openEditor();
+      return;
+    }
+    if (entered === savedPin) {
+      openEditor();
+    } else {
+      gateStatus.className = 'status err';
+      gateStatus.textContent = '❌ PIN ไม่ถูกต้อง';
+    }
+  } catch (err) {
+    gateStatus.className = 'status err';
+    gateStatus.textContent = '❌ เชื่อม Firebase ไม่ได้: ' + err.message;
+  }
+};
+
+function openEditor() {
+  document.getElementById('gate').style.display = 'none';
+  document.getElementById('editorArea').style.display = 'block';
+  loadCurrentTheme();
+}
+
+/* ===== โหลดค่าปัจจุบันมาใส่ในฟอร์ม ===== */
+async function loadCurrentTheme() {
+  const snap = await db.ref('config/overlayTheme').get();
+  const t = snap.exists() ? snap.val() : {};
+  if (t.gold) document.getElementById('colorGold').value = t.gold;
+  if (t.pink) document.getElementById('colorPink').value = t.pink;
+  if (t.cyan) document.getElementById('colorCyan').value = t.cyan;
+  if (t.card) document.getElementById('colorCard').value = t.card;
+  if (t.sentLabel) document.getElementById('sentLabel').value = t.sentLabel;
+  if (t.ttsTemplate) document.getElementById('ttsTemplate').value = t.ttsTemplate;
+  if (typeof t.ttsEnabled === 'boolean') document.getElementById('ttsEnabled').checked = t.ttsEnabled;
+  if (t.ttsRate) { document.getElementById('ttsRate').value = t.ttsRate; document.getElementById('ttsRateVal').textContent = t.ttsRate + 'x'; }
+  if (t.displayMs) { const sec = t.displayMs / 1000; document.getElementById('displaySec').value = sec; document.getElementById('displaySecVal').textContent = sec + 's'; }
+}
+
+/* ===== ปุ่มทดสอบ: เรียกฟังก์ชัน testGift() ใน overlay.html ผ่าน iframe (same-origin) ===== */
+document.getElementById('testBtn').onclick = () => {
+  const frame = document.getElementById('previewFrame');
+  try {
+    frame.contentWindow.testGift();
+  } catch (e) {
+    alert('เรียก preview ไม่สำเร็จ ลองรีเฟรชหน้านี้แล้วลองใหม่');
+  }
+};
+
+/* ===== อัปเดตตัวเลขข้าง slider แบบสด ===== */
+document.getElementById('ttsRate').oninput = (e) => {
+  document.getElementById('ttsRateVal').textContent = parseFloat(e.target.value).toFixed(2) + 'x';
+};
+document.getElementById('displaySec').oninput = (e) => {
+  document.getElementById('displaySecVal').textContent = e.target.value + 's';
+};
+
+/* ===== บันทึก ===== */
+const saveStatus = document.getElementById('saveStatus');
+document.getElementById('saveBtn').onclick = async () => {
+  const theme = {
+    gold: document.getElementById('colorGold').value,
+    pink: document.getElementById('colorPink').value,
+    cyan: document.getElementById('colorCyan').value,
+    card: document.getElementById('colorCard').value,
+    sentLabel: document.getElementById('sentLabel').value.trim(),
+    ttsTemplate: document.getElementById('ttsTemplate').value.trim(),
+    ttsEnabled: document.getElementById('ttsEnabled').checked,
+    ttsRate: parseFloat(document.getElementById('ttsRate').value),
+    displayMs: parseInt(document.getElementById('displaySec').value) * 1000,
+  };
+  try {
+    await db.ref('config/overlayTheme').set(theme);
+    saveStatus.className = 'ok';
+    saveStatus.textContent = '✅ บันทึกแล้ว มีผลกับหน้าจอไลฟ์ทันที';
+  } catch (e) {
+    saveStatus.className = 'err';
+    saveStatus.textContent = '❌ บันทึกไม่สำเร็จ: ' + e.message;
+  }
+};
+</script>
+</body>
+</html>
